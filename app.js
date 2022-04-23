@@ -1,42 +1,31 @@
-
 import Koa from 'koa'
-import path from 'path';
-import KoaStatic from 'koa-static'
-import koaBody  from 'koa-body'
 import koajwt from 'koa-jwt'
+
+import errorHandel from './utils/error.js'
+import socketIo from './utils/socket/index.js'
 import initDB from './config/db/initDB.js'
+import {koaBody,koaStatic }  from './utils/koaBody-koaStatic.js'
+
+// 接口
+import loginRouter from './router/login/index.js'
+
+const app = new Koa()
+const PORT = 10086 ;
+
+// 创建服务
+const httpServer = socketIo(app)
+
 try {
+  // 初始化数据库
   initDB()
 } catch (error) {
   console.log('error', error)
 }
-// 接口
-import loginRouter from './router/login/index.js'
-
-const __dirname = path.resolve();
-// 处理POST请求参数
-const app = new Koa()
-const PORT = 10086 ;
 
 // 访问静态文件
-app.use(KoaStatic(
-  path.join( __dirname,  "/public")
-))
-
+app.use(koaStatic);
 // 文件上传
-app.use(koaBody({
-  multipart:true, // 支持文件上传
-  // encoding:'gzip',
-  formidable:{
-    uploadDir:path.join(__dirname,'public/upload/'), // 设置文件上传目录
-    keepExtensions: true,    // 保持文件的后缀
-    maxFieldsSize:2 * 1024 * 1024, // 文件上传大小
-    onFileBegin:(name,file) => { // 文件上传前的设置
-      // console.log(`name: ${name}`);
-      // console.log(file);
-    },
-  }
-}));
+app.use(koaBody);
 
 // 从url、body 或者 cookie 中获取 token
 app.use(async (ctx, next) => {
@@ -53,24 +42,6 @@ app.use(async (ctx, next) => {
   await next();
 })
 
-// 错误监听
-app.use((ctx, next) => {
-  return next().catch((err) => {
-    console.log('err', err)
-      if(err.status === 401){
-        ctx.status = 401;
-        ctx.body = {
-          data:{
-            code: -1,
-            message:'Protected resource, use Authorization header to get access\n(token可能无效了)'
-          }
-        };
-      }else{
-          throw err;
-      }
-  })
-})
-
 // token校验 注意：放在路由前面
 app.use(koajwt({
   secret: 'Gopal_token'
@@ -81,7 +52,9 @@ app.use(koajwt({
 
 app.use(loginRouter.routes(),loginRouter.allowedMethods())// 允许http请求的所有方法
 
+// 错误监听
+app.use((ctx, next) => errorHandel(ctx, next))
 
-app.listen(PORT,() => {
+httpServer.listen(PORT,() => {
   console.log(`('********************启动成功,${ "http://127.0.0.1"}:${PORT}********************`);
 });
