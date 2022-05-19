@@ -5,6 +5,8 @@ import errorHandel from './utils/error.js'
 import socketIo from './utils/socket/index.js'
 import initDB from './config/db/initDB.js'
 import {koaBody,koaStatic }  from './utils/koaBody-koaStatic.js'
+import process_test from './utils/process_test/index.js'
+import node_test from './utils/node_test_api/index.js'
 
 // 接口
 import loginRouter from './router/login/index.js'
@@ -18,6 +20,8 @@ const httpServer = socketIo(app)
 try {
   // 初始化数据库
   initDB()
+  process_test()
+  node_test()
 } catch (error) {
   console.log('error', error)
 }
